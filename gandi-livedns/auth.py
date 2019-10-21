@@ -23,16 +23,21 @@ from config import *
 pp = pprint.PrettyPrinter(indent=4)
 
 certbot_domain = os.environ.get("CERTBOT_DOMAIN")
-try:
-    certbot_domain
-except NameError:
+if not certbot_domain:
     print("CERTBOT_DOMAIN environment variable is missing, exiting")
     sys.exit(1)
 
+acme_challenge = "_acme-challenge"
+gandi_domain = os.environ.get("GANDI_DOMAIN")
+if not gandi_domain:
+    gandi_domain = certbot_domain
+else:
+    acme_challenge += "." + certbot_domain.replace("."+gandi_domain,"")
+
+print("certbot_domain={}, gandi_domain={}, acme_challenge={}".format(certbot_domain, gandi_domain, acme_challenge))
+
 certbot_validation = os.environ.get("CERTBOT_VALIDATION")
-try:
-    certbot_validation
-except NameError:
+if not certbot_validation:
     print("CERTBOT_VALIDATION environment variable is missing, exiting")
     sys.exit(1)
 
@@ -40,6 +45,16 @@ if livedns_sharing_id is None:
     sharing_param = ''
 else:
     sharing_param = '?sharing_id={}'.format(livedns_sharing_id)
+
+try:
+    livedns_apikey
+except NameError:
+    livedns_apikey = os.environ.get("LIVEDNS_APIKEY")
+
+if not livedns_apikey:
+    print("livends_apikey not defined and LIVEDNS_APIKEY environment variable is missing, exiting")
+    sys.exit(1)
+        
 
 headers = {
     'X-Api-Key': livedns_apikey,
@@ -54,18 +69,18 @@ else:
     response.raise_for_status()
     sys.exit(1)
 
-domain_index = next((index for (index, d) in enumerate(domains) if d["fqdn"] == certbot_domain), None)
+domain_index = next((index for (index, d) in enumerate(domains) if d["fqdn"] == gandi_domain), None)
 
 if domain_index is None:
     # domain not found
     print('The requested domain {} was not found in this gandi account'
-          .format(certbot_domain))
+          .format(gandi_domain))
     sys.exit(1)
 
 domain_records_href = domains[domain_index]["domain_records_href"]
 
-response = requests.get('{}/_acme-challenge/TXT{}'
-                        .format(domain_records_href, sharing_param),
+response = requests.get('{}/{}/TXT{}'
+                        .format(domain_records_href, acme_challenge, sharing_param),
                         headers=headers)
 
 if response.status_code == 404:
@@ -73,8 +88,8 @@ if response.status_code == 404:
       "rrset_ttl": 300,
       "rrset_values": [certbot_validation]
     }
-    response = requests.post('{}/_acme-challenge/TXT{}'
-                             .format(domain_records_href, sharing_param),
+    response = requests.post('{}/{}/TXT{}'
+                             .format(domain_records_href, acme_challenge, sharing_param),
                              headers=headers, json=newrecord)
 elif response.ok:
     newrecord = {
@@ -82,8 +97,8 @@ elif response.ok:
       "rrset_values": response.json()['rrset_values'] + [certbot_validation]
     }
     # pp.pprint(newrecord)
-    response = requests.put('{}/_acme-challenge/TXT{}'
-                            .format(domain_records_href, sharing_param),
+    response = requests.put('{}/{}/TXT{}'
+                            .format(domain_records_href, acme_challenge, sharing_param),
                             headers=headers, json=newrecord)
 else:
     print("Failed to look for existing _acme-challenge record")
