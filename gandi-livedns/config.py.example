@@ -22,3 +22,7 @@ livedns_apikey = "YOUR-KEY-HERE"
 
 #livedns_sharing_id="e2f9927a-ebc9-44d4-bd00-af51f8327ec2"
 livedns_sharing_id = None
+
+# Base domain managed by Gandi - needed if certbot domain is for a specific host
+gandi_domain = "your_domain.ltd"
+

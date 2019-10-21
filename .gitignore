@@ -2,6 +2,7 @@
 config.py
 config.sh
 ovh.conf
+*~
 
 # Python Byte-compiled / optimized / DLL files
 *.py[cod]

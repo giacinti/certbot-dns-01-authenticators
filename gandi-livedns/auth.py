@@ -22,19 +22,23 @@ from config import *
 
 pp = pprint.PrettyPrinter(indent=4)
 
+acme_challenge = "_acme-challenge"
+
 certbot_domain = os.environ.get("CERTBOT_DOMAIN")
 if not certbot_domain:
     print("CERTBOT_DOMAIN environment variable is missing, exiting")
     sys.exit(1)
 
-acme_challenge = "_acme-challenge"
-gandi_domain = os.environ.get("GANDI_DOMAIN")
+try:
+    gandi_domain
+except NameError:
+    gandi_domain = os.environ.get("GANDI_DOMAIN")
+    
 if not gandi_domain:
     gandi_domain = certbot_domain
 else:
     acme_challenge += "." + certbot_domain.replace("."+gandi_domain,"")
 
-print("certbot_domain={}, gandi_domain={}, acme_challenge={}".format(certbot_domain, gandi_domain, acme_challenge))
 
 certbot_validation = os.environ.get("CERTBOT_VALIDATION")
 if not certbot_validation:
